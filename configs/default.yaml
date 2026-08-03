@@ -45,12 +45,14 @@ baselines:
 
 # ---------------------------------------------------------------------------
 # Perceptron branch predictor (PyTorch).
+# The input dimension is derived from features (global + local history lengths),
+# so it is not repeated here.
 # ---------------------------------------------------------------------------
 model:
-  history_length: 16                    # inputs = history bits (+ bias)
   learning_rate: 0.01
   epochs: 5
   batch_size: 256
+  patience: 3                           # early-stopping patience (epochs)
   # Online adaptation during evaluation (mimics a real adaptive predictor).
   online_update: true
 
