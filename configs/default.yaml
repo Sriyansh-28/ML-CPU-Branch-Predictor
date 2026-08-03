@@ -1,0 +1,71 @@
+# Default experiment configuration for ML-CPU-Branch-Predictor.
+# Every field is consumed by a typed dataclass in src/branchpred/training/config.py,
+# which validates values at load time. Override any subset via an experiment YAML.
+
+seed: 42
+
+# ---------------------------------------------------------------------------
+# Data: where the branch trace comes from.
+#   source: "synthetic" -> generate a reproducible trace with trace_generator
+#           "file"      -> load an existing trace (real or previously generated)
+# ---------------------------------------------------------------------------
+data:
+  source: synthetic
+  trace_path: data/raw/trace.csv        # written by generate_data / read by loaders
+  num_branches: 200000                  # length of synthetic trace
+  # Relative mix of branch behaviours in the synthetic generator (auto-normalised).
+  pattern_mix:
+    loop: 0.35                          # strongly biased loop branches
+    nested_loop: 0.20                   # periodic, history-correlated
+    correlated: 0.25                    # outcome depends on prior branches
+    function: 0.10                      # call/return style
+    random: 0.10                        # hard-to-predict noise
+  # Chronological split fractions (no shuffling — see docs/design.md).
+  train_frac: 0.7
+  val_frac: 0.1
+  # test_frac is the remainder (0.2)
+
+# ---------------------------------------------------------------------------
+# Feature engineering (causal — only past outcomes are ever used).
+# ---------------------------------------------------------------------------
+features:
+  global_history_length: 16             # GHR bits
+  local_history_length: 8               # per-PC history bits
+  pc_hash_bits: 12                      # PC hashed into 2**pc_hash_bits buckets
+
+# ---------------------------------------------------------------------------
+# Classical baselines.
+# ---------------------------------------------------------------------------
+baselines:
+  two_bit:
+    table_bits: 14                      # PHT has 2**table_bits counters
+  gshare:
+    table_bits: 14
+    history_bits: 14                    # GHR width folded into the index
+
+# ---------------------------------------------------------------------------
+# Perceptron branch predictor (PyTorch).
+# The input dimension is derived from features (global + local history lengths),
+# so it is not repeated here.
+# ---------------------------------------------------------------------------
+model:
+  learning_rate: 0.01
+  epochs: 5
+  batch_size: 256
+  patience: 3                           # early-stopping patience (epochs)
+  # Online adaptation during evaluation (mimics a real adaptive predictor).
+  online_update: true
+
+# ---------------------------------------------------------------------------
+# Evaluation.
+# ---------------------------------------------------------------------------
+evaluation:
+  instructions_per_branch: 5.0          # for MPKI (per 1000 instructions)
+
+# ---------------------------------------------------------------------------
+# Output locations.
+# ---------------------------------------------------------------------------
+output:
+  checkpoint_path: results/metrics/perceptron.pt
+  metrics_dir: results/metrics
+  figures_dir: results/figures

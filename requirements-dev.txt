@@ -1,0 +1,7 @@
+# Development-only dependencies. Install with:  pip install -r requirements-dev.txt
+-r requirements.txt
+
+pytest>=7.4            # test runner
+pytest-cov>=4.1        # coverage reporting
+ruff>=0.4             # linting
+black>=24.0           # code formatting
