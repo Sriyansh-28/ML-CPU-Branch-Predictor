@@ -1,0 +1,16 @@
+# Example experiment override: a longer-history perceptron on a larger trace.
+# Only the fields below differ from configs/default.yaml; the loader deep-merges
+# this on top of the defaults.
+
+seed: 7
+
+data:
+  num_branches: 500000
+
+features:
+  global_history_length: 32
+
+model:
+  history_length: 32
+  learning_rate: 0.005
+  epochs: 8

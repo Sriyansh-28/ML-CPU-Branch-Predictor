@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "branchpred"
+version = "0.1.0"
+description = "ML-based CPU branch predictor (PyTorch perceptron) benchmarked against classical 2-bit and gshare predictors."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+authors = [{ name = "Sriyansh" }]
+keywords = ["branch-prediction", "cpu", "microarchitecture", "machine-learning", "pytorch", "perceptron"]
+dependencies = [
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "scikit-learn>=1.3",
+    "matplotlib>=3.7",
+    "torch>=2.0",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4", "pytest-cov>=4.1", "ruff>=0.4", "black>=24.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -q"
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "B", "UP"]
+ignore = ["E501"]  # line length handled by black
+
+[tool.black]
+line-length = 100
+target-version = ["py39"]
