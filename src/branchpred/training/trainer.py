@@ -118,6 +118,18 @@ def train_perceptron(
     config: Config,
 ) -> TrainResult:
     """Train ``model`` on ``train_ds`` with early stopping on ``val_ds`` accuracy."""
+    if len(train_ds) == 0:
+        raise ValueError("Training set is empty; cannot train.")
+    if len(val_ds) == 0:
+        # This trainer selects the best checkpoint and early-stops on validation
+        # accuracy. An empty validation set (e.g. val_frac=0, or a tiny trace whose
+        # validation slice rounds to zero rows) would make _evaluate return (0, 0),
+        # freezing epoch 1 as "best" and discarding all later improvement. Fail
+        # fast rather than silently mis-selecting the model.
+        raise ValueError(
+            "Validation set is empty; increase data.val_frac or the trace size so "
+            "the validation slice has at least one branch."
+        )
     train_loader = DataLoader(train_ds, batch_size=config.model.batch_size, shuffle=True)
     val_loader = DataLoader(val_ds, batch_size=config.model.batch_size, shuffle=False)
 
@@ -169,18 +181,30 @@ def train_perceptron(
 
 
 # -- checkpointing -------------------------------------------------------------
-def save_checkpoint(model: PerceptronPredictorModel, path: str | Path) -> Path:
-    """Save a self-describing checkpoint (weights + shape metadata)."""
+def save_checkpoint(
+    model: PerceptronPredictorModel, path: str | Path, config: Config | None = None
+) -> Path:
+    """Save a self-describing checkpoint (weights + shape + feature spec).
+
+    When ``config`` is supplied, the *full* feature specification (global/local
+    history lengths and PC-hash bits) is stored alongside the shape metadata, so a
+    later load can verify that the evaluation config matches how the model was
+    trained — not just that the total ``feature_dim`` happens to agree.
+    """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    torch.save(
-        {
-            "state_dict": model.state_dict(),
-            "feature_dim": model.feature_dim,
-            "num_pc_buckets": model.num_pc_buckets,
-        },
-        path,
-    )
+    payload = {
+        "state_dict": model.state_dict(),
+        "feature_dim": model.feature_dim,
+        "num_pc_buckets": model.num_pc_buckets,
+    }
+    if config is not None:
+        payload["feature_spec"] = {
+            "global_history_length": config.features.global_history_length,
+            "local_history_length": config.features.local_history_length,
+            "pc_hash_bits": config.features.pc_hash_bits,
+        }
+    torch.save(payload, path)
     return path
 
 
@@ -193,3 +217,34 @@ def load_checkpoint(path: str | Path) -> PerceptronPredictorModel:
     model.load_state_dict(ckpt["state_dict"])
     model.eval()
     return model
+
+
+def load_adapter_from_checkpoint(path: str | Path, config: Config) -> PerceptronPredictor:
+    """Load a checkpoint and build the online adapter, verifying the feature spec.
+
+    Guards against silently evaluating a mismatched model: if the checkpoint stored
+    a feature spec (global/local history lengths, PC-hash bits), it must match the
+    config exactly — otherwise the adapter would feed columns with different
+    meanings or hash PCs into a different bucket range while ``feature_dim`` alone
+    still agreed.
+    """
+    ckpt = torch.load(path, map_location="cpu", weights_only=True)
+    spec = ckpt.get("feature_spec")
+    if spec is not None:
+        expected = {
+            "global_history_length": config.features.global_history_length,
+            "local_history_length": config.features.local_history_length,
+            "pc_hash_bits": config.features.pc_hash_bits,
+        }
+        if spec != expected:
+            raise ValueError(
+                "Checkpoint feature spec does not match the config.\n"
+                f"  checkpoint: {spec}\n  config    : {expected}\n"
+                "Re-train with this config or evaluate with the training config."
+            )
+    model = PerceptronPredictorModel(
+        feature_dim=ckpt["feature_dim"], num_pc_buckets=ckpt["num_pc_buckets"]
+    )
+    model.load_state_dict(ckpt["state_dict"])
+    model.eval()
+    return build_perceptron_adapter(model, config)

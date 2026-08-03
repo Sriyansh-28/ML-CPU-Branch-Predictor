@@ -38,6 +38,18 @@ def test_adapter_rejects_dim_mismatch() -> None:
         raise AssertionError("expected ValueError on feature_dim mismatch")
 
 
+def test_adapter_rejects_pc_bucket_mismatch() -> None:
+    # feature_dim matches (4+4=8) but the model table has 16 buckets while
+    # pc_hash_bits=6 would hash into 64 -> reading the wrong PC weights.
+    model = PerceptronPredictorModel(feature_dim=8, num_pc_buckets=16)  # 2**4
+    try:
+        PerceptronPredictor(model, global_history_length=4, local_history_length=4, pc_hash_bits=6)
+    except ValueError:
+        pass
+    else:  # pragma: no cover
+        raise AssertionError("expected ValueError on num_pc_buckets mismatch")
+
+
 def test_adapter_reconstructs_offline_features() -> None:
     # Step the adapter through a trace and confirm the history vector it builds at
     # each branch matches the corresponding row from build_features exactly.

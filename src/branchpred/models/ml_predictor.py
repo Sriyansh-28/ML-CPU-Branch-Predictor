@@ -59,6 +59,14 @@ class PerceptronPredictor(BasePredictor):
                 f"model.feature_dim ({model.feature_dim}) != "
                 f"global+local history ({expected})."
             )
+        # The adapter hashes PCs into 2**pc_hash_bits buckets to index the model's
+        # per-PC weight table; that must equal the table the model was built with,
+        # or predictions would read weights for the wrong PCs.
+        if model.num_pc_buckets != (1 << pc_hash_bits):
+            raise ValueError(
+                f"model.num_pc_buckets ({model.num_pc_buckets}) != "
+                f"2**pc_hash_bits ({1 << pc_hash_bits})."
+            )
         self.model = model.eval()  # inference mode; we update weights manually
         self.gh_len = global_history_length
         self.lh_len = local_history_length

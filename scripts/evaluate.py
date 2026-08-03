@@ -23,9 +23,8 @@ from branchpred.evaluation.evaluator import evaluate_online  # noqa: E402
 from branchpred.pipeline import build_features_for  # noqa: E402
 from branchpred.training.config import Config  # noqa: E402
 from branchpred.training.trainer import (  # noqa: E402
-    build_perceptron_adapter,
     get_trace,
-    load_checkpoint,
+    load_adapter_from_checkpoint,
 )
 from branchpred.utils.seed import set_seed  # noqa: E402
 
@@ -53,8 +52,7 @@ def main() -> None:
             history_bits=config.baselines.gshare.history_bits,
         )
     else:
-        model = load_checkpoint(config.output.checkpoint_path)
-        predictor = build_perceptron_adapter(model, config)
+        predictor = load_adapter_from_checkpoint(config.output.checkpoint_path, config)
 
     res = evaluate_online(
         predictor,

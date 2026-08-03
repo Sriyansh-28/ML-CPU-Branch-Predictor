@@ -84,7 +84,7 @@ def run_comparison(config: Config, save_artifacts: bool = True) -> ComparisonOut
     logger.info("Training perceptron on the training split...")
     model, train_result = train_perceptron_model(config, feats)
     if save_artifacts:
-        save_checkpoint(model, config.output.checkpoint_path)
+        save_checkpoint(model, config.output.checkpoint_path, config)
 
     predictors = {
         "2-bit": TwoBitPredictor(table_bits=config.baselines.two_bit.table_bits),

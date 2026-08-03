@@ -31,7 +31,7 @@ def main() -> None:
     df = get_trace(config)
     feats = build_features_for(config, df)
     model, result = train_perceptron_model(config, feats)
-    path = save_checkpoint(model, config.output.checkpoint_path)
+    path = save_checkpoint(model, config.output.checkpoint_path, config)
 
     print(f"Best validation accuracy : {result.best_val_acc:.4f} (epoch {result.best_epoch})")
     print(f"Checkpoint saved to      : {path}")
