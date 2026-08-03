@@ -72,6 +72,13 @@ class ModelConfig:
 
 
 @dataclass
+class EvaluationConfig:
+    # Assumed average instructions per branch, used to express MPKI per 1000
+    # instructions (see evaluation.metrics). 1.0 reads as per-1000-branches.
+    instructions_per_branch: float = 5.0
+
+
+@dataclass
 class OutputConfig:
     checkpoint_path: str = "results/metrics/perceptron.pt"
     metrics_dir: str = "results/metrics"
@@ -85,6 +92,7 @@ class Config:
     features: FeaturesConfig = field(default_factory=FeaturesConfig)
     baselines: BaselinesConfig = field(default_factory=BaselinesConfig)
     model: ModelConfig = field(default_factory=ModelConfig)
+    evaluation: EvaluationConfig = field(default_factory=EvaluationConfig)
     output: OutputConfig = field(default_factory=OutputConfig)
 
     # -- construction ----------------------------------------------------------
@@ -122,6 +130,8 @@ class Config:
             raise ValueError("model.batch_size must be positive.")
         if self.model.learning_rate <= 0:
             raise ValueError("model.learning_rate must be positive.")
+        if self.evaluation.instructions_per_branch <= 0:
+            raise ValueError("evaluation.instructions_per_branch must be positive.")
 
 
 def _merge_into_dataclass(cls: type, data: dict[str, Any]) -> Any:
